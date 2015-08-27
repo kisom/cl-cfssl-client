@@ -26,6 +26,9 @@ case, the default port will be used), or as a host:port."))
   (make-instance 'server-group
                  :servers (mapcar #'new-server hosts)))
 
+;;; todo: write a macro `with-fallback` to reduce some of the common
+;;; elements below.
+
 (defmethod sign ((group server-group) (request sign-request))
   "Request a signed certificate from the server group."
   (labels ((group-sign (servers)
@@ -40,7 +43,7 @@ case, the default port will be used), or as a host:port."))
     (group-sign (servers-of group))))
 
 (defmethod info ((group server-group) (label string) (profile string)
-                 &key usages)
+                 &key extra)
   "Request information about the first CA that can be reach in the
 group. If usages is nil, it will return a string containing the CA's
 certificate; otherwise, a hash-table containing the certificate and
@@ -51,14 +54,14 @@ usages will be returned."
                (let ((response
                       (ignore-errors
                         (info (first servers)
-                              label profile :usages usages))))
+                              label profile :extra extra))))
                  (if (null response)
                      (group-info (rest servers))
                    response)))))
     (group-info (servers-of group))))
 
 (defmethod auth-sign ((group server-group) (req sign-request)
-                      provider &optional id)
+                      &optional provider id)
   "Request a certificate signing using an authenticated request."
   (labels ((auth-request (authenticate-signing-request provider req))
            (group-auth-sign (servers)

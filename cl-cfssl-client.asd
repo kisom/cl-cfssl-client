@@ -5,18 +5,19 @@
   :author "K. Isom <kyle@metacircular.net>"
   :license "MIT license"
   :depends-on (#:drakma
-               #:split-sequence
-               #:flexi-streams
-               #:yason
                #:fare-mop
+               #:flexi-streams
                #:ironclad
-               #:s-base64)
+               #:local-time
+               #:s-base64
+               #:split-sequence
+               #:yason)
   :serial t
   :components ((:file "package")
                (:file "errors")
                (:file "utils")
-               (:file "auth")
                (:file "requests")
-               (:file "cl-cfssl-client")
+               (:file "auth")
+               (:file "client")
                (:file "groups")))
 

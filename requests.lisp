@@ -1,5 +1,8 @@
 (in-package #:cfssl-client)
 
+;;; Define the request data types and provide functions for converting
+;;; them to a format suitable to outputting to JSON.
+
 (defgeneric clos-to-map (obj &key converter)
   (:documentation "Take a CLOS object and return it as a hash table."))
 
@@ -128,49 +131,4 @@ appropriate."
     (sethash "certificate_request" (sign-request-csr-of request) ht)
     (remhash "certificate-request" ht)
     ht))
-
-(defclass auth-sign-request ()
-  ((token :initarg :token
-          :type string
-          :reader token-of
-          :documentation "Base64-encoded authentication token.")
-   (request :initarg :request
-            :type (or string sign-request)
-            :reader request-of
-            :documentation "Signing request: may be already encoded into JSON or an instance of 'sign-request'.")
-   (timestamp :initarg :timestamp
-              :type (or integer nil)
-              :reader timestamp-of
-              :documentation "Optional timestamp to accompany the
-request; its optionality is dependent on the policies of the upstream
-server.")
-   (remote-address :initarg :remote-address
-                   :type (or string nil)
-                   :reader remote-address-of
-                   :documentation "Optional remote address to
-accompany the request; its optionality is depdendent on the policies
-of the upstream server."))
-  (:documentation "An authenticated signing request."))
-
-(defun authenticate-signing-request (provider request)
-  "Generate an authenticated signing request from an unauthenticated
-signing request and an authentication provider."
-  (assert (providerp provider) (provider)
-    "~A is not an authentication provider."
-    (type-of provider))
-  (make-instance 'auth-sign-request
-                 :token (auth-token provider request)
-                 :request request
-                 :timestamp (unix-timestamp)))
-
-(defmethod clos-to-map ((request auth-sign-request)
-                        &key (converter #'keyword-to-downcase))
-  "Implementation of #'clos-to-map for authenticated signing requests."
-  (with-new-hash-table (ht)
-    (sethash "token" (token-of request) ht)
-    (sethash "request" (base64 (to-json (request-of request))) ht)
-    (when (slot-boundp request 'timestamp)
-      (sethash "timestamp" (timestamp-of request) ht))
-    (when (slot-boundp request 'remote-address)
-      (sethash "remote_address" (remote-address-of request)))))
 

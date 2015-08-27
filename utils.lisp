@@ -1,5 +1,7 @@
 (in-package #:cfssl-client)
 
+;;; Various utility functions used throughout the code.
+
 (defun sethash (k v m)
   "Convenience notation for setting a value in a hash table."
   (setf (gethash k m) v))
@@ -63,18 +65,25 @@ hash-table ht to that value."
     (unless (null v)
        (sethash ,k% v ,ht))))
 
-;;; read-file-string is used for testing this with CSR files on disk.
 (defun read-file-string (path)
+  "Read the contents of the file at path as a string."
   (with-open-file (s path)
     (let ((data (make-string (file-length s))))
       (read-sequence data s)
       data)))
 
 (defmacro with-new-hash-table (htsyms &body body)
+  "with-new-hash-table creates and binds a new hash table for each of
+the symbols in htsyms, executing inside a let form, and returns the
+hash table(s). If only one hash table is provided, return it as a
+single element; otherwise, return an list of the hash tables."
   `(let ,(mapcar (lambda (sym)
                    (list sym (list 'new-hash-table))) htsyms)
      ,@body
-     ht))
+     ,(if (null (rest htsyms))
+         (first htsyms)
+        htsyms)))
+         
 
 (defun emptyp (v)
   "Returns true if v is nil or an empty string."
@@ -134,10 +143,12 @@ entry in the response hash table will be returned. If it's a list of
 keys, an new hash table of only the requested keys will be returned."
   (case (aval :status response)
     (404 (error (page-not-found (aval :uri response))))
-    (t (let ((rht (yason:parse (to-string (aval :body response)))))
+    (200 (let ((rht (yason:parse (to-string (aval :body response)))))
          (if (gethash "success" rht)
              (extract-keys (gethash "result" rht) keys)
-           (error (new-api-error (first (gethash "errors" rht)))))))))
+           (error (new-api-error (first (gethash "errors" rht)))))))
+    (t (error (new-http-error (aval :status response)
+                              (string-trim (aval :body response)))))))
 
 (defun split-host-port (s)
   "Split a host:port specification into an improper list containing

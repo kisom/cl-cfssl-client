@@ -1,11 +1,14 @@
-;;;; cl-cfssl-client.lisp
+;;;; client.lisp
 
 (in-package #:cfssl-client)
 
-;;; "cl-cfssl-client" goes here. Hacks and glory await!
+;;; "cfssl-client" goes here. Hacks and glory await!
+
+;;; Define the basic 'Remote' interfaces from the CFSSL client and
+;;; implement a single-server 'Remote'.
 
 ;;; auth-sign performs an authenticated signature request.
-(defgeneric auth-sign (conn req provider &optional id)
+(defgeneric auth-sign (conn req &optional provider id)
   (:documentation "Perform an authenticated signing request."))
 
 ;;; sign requests that the server sign a certificate request.
@@ -16,10 +19,11 @@
 ;;; if usages is not nil, it will return a hash table containing the
 ;;; certificate and usages; otherwise, it returns the CA's certificate
 ;;; as a string.
-(defgeneric info (conn label profile &key usages)
-  (:documentation "Request information about the CA. If usages is nil,
+(defgeneric info (conn label profile &key extra)
+  (:documentation "Request information about the CA. If extra is nil,
 it will return a string containing the CA's certificate; otherwise, a
-hash-table containing the certificate and usages will be returned."))
+hash-table containing the certificate and extra information will be
+returned."))
 
 (defgeneric remote-uri (conn endpoint)
   (:documentation "Remote-uri returns the URI appropriate for a given
@@ -66,6 +70,9 @@ notation or via the :port keyword, not both."))
           endpoint))
 
 (defun post-request (uri contents)
+  "Send a POST request to the server and return the HTTP status code,
+body, and response URI. The response URI is used to respond to 404
+codes."
   (multiple-value-bind (body status headers response-uri)
       (drakma:http-request uri
                            :content-type "application/json"
@@ -76,16 +83,20 @@ notation or via the :port keyword, not both."))
           (cons :body body)
           (cons :uri response-uri))))
     
-(defmacro post-api-request (request conn endpoint keys)
-  `(parse-api-response
-    (post-request (remote-uri ,conn ,endpoint)
-                  (to-json ,request))
-    ,keys))
+(defun post-api-request (request conn endpoint keys)
+  "Build a POST request for the CFSSL server and parse the response
+received from the server."
+  (parse-api-response
+   (post-request (remote-uri conn endpoint)
+                 (to-json request))
+    keys))
 
 (defmethod sign ((conn server) (request sign-request))
+  "Send a request for a signed certificate to the CFSSL server."
   (post-api-request request conn "sign" "certificate"))
 
 (defun info-request (label profile)
+  "Produce a hash table with the relevant info request parameters."
   (with-new-hash-table (ht)
     (unless (emptyp label)
       (sethash "label" label ht))
@@ -93,18 +104,20 @@ notation or via the :port keyword, not both."))
       (sethash "profile" profile ht))))
 
 (defmethod info ((conn server) (label string) (profile string)
-                 &key usages)
+                 &key extra)
+  "Request a CFSSL CA's certificate, and optionally additional
+information."
   (post-api-request (info-request label profile)
-                    conn "info" (if usages nil "certificate")))
+                    conn "info" (if extra nil "certificate")))
 
 (defmethod auth-sign ((conn server) (req sign-request)
-                      provider &optional id)
+                      &optional provider id)
   "Use the provider to authenticate the request, then send the request
 to the CFSSL server."
   (post-api-request (authenticate-signing-request provider req)
                     conn "authsign" "certificate"))
   
 (defmethod auth-sign ((conn server) (req auth-sign-request)
-                      provider &optional id)
+                      &optional provider id)
   "Send an authenticated request to the CFSSL server."
   (post-api-request req conn "authsign" "certificate"))

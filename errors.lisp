@@ -1,5 +1,7 @@
 (in-package :cfssl-client)
 
+;;; Define error conditions.
+
 (define-condition http-error (error)
   ((status :initarg :status
            :reader status-of
@@ -22,6 +24,12 @@ fails.")
   (make-condition 'http-error
                   :status 404
                   :message (format nil "~A was not found on the server." uri)))
+
+(defun new-http-error (status message)
+  "Build a generic HTTP status-code error."
+  (make-condition 'http-error
+                  :status status
+                  :message message))
 
 (define-condition api-error (error)
   ((code :initarg :code
