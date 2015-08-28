@@ -2,6 +2,13 @@
 
 ;;; Various utility functions used throughout the code.
 
+;;; Yason requires that JSON objects come from hash tables; however,
+;;; most of the objects used in this package are CLOS objects. This
+;;; provides a common interface for producing the necessary hash
+;;; table.
+(defgeneric ->hash-table (obj &key converter)
+  (:documentation "Convert the object to a hash table."))
+
 (defun sethash (k v m)
   "Convenience notation for setting a value in a hash table."
   (setf (gethash k m) v))
@@ -11,9 +18,18 @@
   (let ((alist '()))
     (maphash (lambda (k v)
 	       (let ((elt (cons k v)))
-		 (setf alist (cons elt alist))))
+		 (push elt alist)))
 	     m)
     alist))
+
+(defun hash-table-keys (m)
+  "Returns a list of the keys in the hash table."
+  (let ((keys '()))
+    (maphash (lambda (k v)
+	       (declare (ignore v))
+	       (push k keys))
+	     m)
+    keys))
 
 (defun alist-to-hash-table (alist)
   "Converts the alist to a hash-table."
@@ -25,7 +41,11 @@
 (defun snake-case (s)
   "Substitute Lisp-style hyphenation to underscores, as is the
 standard in JSON key names."
-  (substitute #\_ #\- s))
+  (nsubstitute #\_ #\- s))
+
+(defun lisp-case (s)
+  "Substitute underscores to Lisp-style hyphentation, e.g. to translate JSON names to Lisp names."
+  (nsubstitute #\- #\_ s))
 
 (defun keyword-to-downcase (kw)
   "Convert a keyword to a string, downcasing the result."
@@ -40,7 +60,7 @@ standard in JSON key names."
   "JSON encode obj to a string."
   (with-output-to-string (s)
     (cond ((hash-table-p obj) (yason:encode obj s))
-          (t (yason:encode (clos-to-map obj) s)))))
+          (t (yason:encode (->hash-table obj) s)))))
 
 (defun new-hash-table ()
   "Create a new hash table with the #'equal function as its test."
@@ -63,7 +83,11 @@ the list."
 hash-table ht to that value."
   `(let ((v (rest (assoc ,k ,alst))))
     (unless (null v)
-       (sethash ,k% v ,ht))))
+      (sethash ,k% v ,ht))))
+
+(defun set-if-bound (obj slot k ht)
+  (when (slot-boundp obj slot)
+    (sethash k (slot-value obj slot) ht)))
 
 (defun read-file-string (path)
   "Read the contents of the file at path as a string."
@@ -117,10 +141,12 @@ a sane value is returned."
   "Return the value of the keys that have been requested. If keys is
 NIL, return the entire result hash table."
   (cond ((null keys) ht)
-        ((listp keys) 
+        ((consp keys) 
          (with-new-hash-table (new-ht)
            (mapcar (lambda (k)
-                     (sethash k (gethash k ht) new-ht)))))
+		     (let ((v (gethash k ht)))
+		       (sethash (lisp-case k) v new-ht)))
+		   keys)))
         (t (gethash keys ht))))
 
 ;;; The CloudFlare API standard, which CFSSL follows, returns a JSON
@@ -154,7 +180,8 @@ keys, an new hash table of only the requested keys will be returned."
   "Split a host:port specification into an improper list containing
 the host and port. If only a host is specified, returns nil."
   (let ((host-port (split-sequence:split-sequence #\: s)))
-    (when (= (length host-port) 2)
+    (unless (or (null (rest host-port))
+		(rest (rest host-port)))
       (cons (car host-port) (parse-integer (cadr host-port))))))
 
 (defun unix-timestamp ()
@@ -185,5 +212,39 @@ used in #'every. If the predicate fails, an error will be returned."
         (maybe-validate v)
       (maybe-validate (list v)))))
         
-        
+(defun hash-table-key-to-disk (ht k path)
+  "Write the value of the hash table HT for the key K to PATH."
+  (when (gethash k ht)
+    (ensure-directories-exist path)
+    (with-open-file (out path
+			 :direction :output
+			 :if-exists :rename)
+      (with-standard-io-syntax
+	(write-sequence (gethash k ht) out)))
+    t))
 
+(defun build-pathname (base suffix)
+  "Given a suffix, such as \"key.pem\", attempt to build a logical pathname starting at base."
+  (cond ((fad:directory-pathname-p base) (concatenate 'string base suffix))
+	((fad:directory-exists-p base) (concatenate 'string base "/" suffix))
+	(t (concatenate 'string base "-" suffix))))
+
+(defmacro did-any-p (&body body)
+  "Did any of the forms in the body return T? Executes all of the forms"
+  `(reduce (lambda (x y) (or x y))
+	   (list ,@body)))
+
+(defun write-response-to-file (base-path response)
+  "Given a CFSSL CA response (e.g. from #'new-key-and-csr), write the
+keys that are present to disk. If base-path is a directory, the files
+will be written to key.pem, csr.pem, and cert.pem,
+respectively. Otherwise, they will be written as -key.pem, -csr.pem,
+and -cert.pem concatenated onto the base path. Returns T if any of the
+keys were written."
+  (did-any-p
+    (hash-table-key-to-disk response "private-key"
+			    (build-pathname base-path "key.pem"))
+    (hash-table-key-to-disk response "certificate-request"
+			    (build-pathname base-path "csr.pem"))
+    (hash-table-key-to-disk response "certificate"
+			    (build-pathname base-path "cert.pem"))))

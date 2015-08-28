@@ -64,11 +64,11 @@ string."
           :reader token-of
           :documentation "Base64-encoded authentication token.")
    (request :initarg :request
-            :type (or string sign-request)
+            :type (or string sign-request generate-and-sign-request)
             :reader request-of
             :documentation "Signing request: may be already encoded into JSON or an instance of 'sign-request'.")
    (timestamp :initarg :timestamp
-              :type (or integer nil)
+              :type integer
               :reader timestamp-of
               :documentation "Optional timestamp to accompany the
 request; its optionality is dependent on the policies of the upstream
@@ -81,7 +81,7 @@ accompany the request; its optionality is depdendent on the policies
 of the upstream server."))
   (:documentation "An authenticated signing request."))
 
-(defun authenticate-signing-request (provider request)
+(defun authenticate-request (provider request)
   "Generate an authenticated signing request from an unauthenticated
 signing request and an authentication provider."
   (assert (providerp provider) (provider)
@@ -92,9 +92,10 @@ signing request and an authentication provider."
                  :request request
                  :timestamp (unix-timestamp)))
 
-(defmethod clos-to-map ((request auth-sign-request)
+(defmethod ->hash-table ((request auth-sign-request)
                         &key (converter #'keyword-to-downcase))
-  "Implementation of #'clos-to-map for authenticated signing requests."
+  "Implementation of #'->hash-table for authenticated signing requests."
+  (declare (ignore converter))
   (with-new-hash-table (ht)
     (sethash "token" (token-of request) ht)
     (sethash "request" (base64 (to-json (request-of request))) ht)

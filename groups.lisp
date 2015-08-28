@@ -29,18 +29,25 @@ case, the default port will be used), or as a host:port."))
 ;;; todo: write a macro `with-fallback` to reduce some of the common
 ;;; elements below.
 
+(defmacro with-fallback (opts &rest body)
+  (let ((f (gensym))
+	(group (first opts))
+	(bindsym (first (rest opts))))
+    `(labels ((,f (,bindsym)
+		(if (null ,bindsym)
+		    (error "No server could complete the request.")
+		    (let ((response
+			   (ignore-errors
+			     ,@body)))
+		      (if (null response)
+			  (,f (rest ,bindsym))
+			  response)))))
+       (,f (servers-of ,group)))))
+
 (defmethod sign ((group server-group) (request sign-request))
   "Request a signed certificate from the server group."
-  (labels ((group-sign (servers)
-             (if (null servers)
-                 (error "No server could complete the request.")
-               (let ((response
-                      (ignore-errors
-                        (sign (first servers) request))))
-                 (if (null response)
-                     (group-sign (rest servers))
-                   response)))))
-    (group-sign (servers-of group))))
+  (with-fallback (group servers)
+    (sign (first servers) request)))
 
 (defmethod info ((group server-group) (label string) (profile string)
                  &key extra)
@@ -48,31 +55,23 @@ case, the default port will be used), or as a host:port."))
 group. If usages is nil, it will return a string containing the CA's
 certificate; otherwise, a hash-table containing the certificate and
 usages will be returned."
-  (labels ((group-info (servers)
-             (if (null servers)
-                 (error "No server could complete the request.")
-               (let ((response
-                      (ignore-errors
-                        (info (first servers)
-                              label profile :extra extra))))
-                 (if (null response)
-                     (group-info (rest servers))
-                   response)))))
-    (group-info (servers-of group))))
+  (with-fallback (group servers)
+    (info (first servers)
+	  label profile :extra extra)))
 
 (defmethod auth-sign ((group server-group) (req sign-request)
                       &optional provider id)
   "Request a certificate signing using an authenticated request."
-  (labels ((auth-request (authenticate-signing-request provider req))
-           (group-auth-sign (servers)
-             (if (null servers)
-                 (error "No server could complete the request.")
-               (let ((response
-                      (ignore-errors
-                        (auth-sign (first servers)
-                                   auth-request provider))))
-                 (if (null response)
-                     (group-auth-sign (rest servers))
-                   response)))))
-    (group-auth-sign (servers-of group))))
-               
+  (let ((auth-request (authenticate-request provider req)))
+    (with-fallback (group servers)
+      (auth-sign (first servers)
+		 auth-request provider))))
+
+(defmethod new-key-and-csr ((group server-group) req &optional provider)
+  "Using a fallback group to generate a new private key and CSR is not supported."
+  (error "new-key-and-csr is not supported for server groups."))
+
+
+(defmethod new-key-and-cert ((group server-group) req &optional provider)
+  "Using a fallback group to generate a new private key and CSR is not supported."
+  (error "new-key-and-cert is not supported for server groups."))

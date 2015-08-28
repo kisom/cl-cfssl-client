@@ -4,7 +4,8 @@
   :description "Describe cl-cfssl-client here"
   :author "K. Isom <kyle@metacircular.net>"
   :license "MIT license"
-  :depends-on (#:drakma
+  :depends-on (#:cl-fad
+	       #:drakma
                #:fare-mop
                #:flexi-streams
                #:ironclad
@@ -14,6 +15,7 @@
                #:yason)
   :serial t
   :components ((:file "package")
+	       (:file "api")
                (:file "errors")
                (:file "utils")
                (:file "requests")

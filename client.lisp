@@ -7,33 +7,6 @@
 ;;; Define the basic 'Remote' interfaces from the CFSSL client and
 ;;; implement a single-server 'Remote'.
 
-;;; auth-sign performs an authenticated signature request.
-(defgeneric auth-sign (conn req &optional provider id)
-  (:documentation "Perform an authenticated signing request."))
-
-;;; sign requests that the server sign a certificate request.
-(defgeneric sign (conn sign-request)
-  (:documentation "Perform a signing request."))
-
-;;; info returns the CA's certificate for the given label and profile.
-;;; if usages is not nil, it will return a hash table containing the
-;;; certificate and usages; otherwise, it returns the CA's certificate
-;;; as a string.
-(defgeneric info (conn label profile &key extra)
-  (:documentation "Request information about the CA. If extra is nil,
-it will return a string containing the CA's certificate; otherwise, a
-hash-table containing the certificate and extra information will be
-returned."))
-
-(defgeneric remote-uri (conn endpoint)
-  (:documentation "Remote-uri returns the URI appropriate for a given
-connection type and endpoint."))
-
-(defmethod remote-uri (conn endpoint)
-  "remote-uri should fail with a bad connection."
-  (error "The method #'remote-uri is inappropriate for an object of type ~A"
-         (type-of conn)))
-
 (defclass server ()
   ((host :initarg :host 
          :reader server-host-of
@@ -114,10 +87,34 @@ information."
                       &optional provider id)
   "Use the provider to authenticate the request, then send the request
 to the CFSSL server."
-  (post-api-request (authenticate-signing-request provider req)
+  (post-api-request (authenticate-request provider req)
                     conn "authsign" "certificate"))
   
 (defmethod auth-sign ((conn server) (req auth-sign-request)
                       &optional provider id)
   "Send an authenticated request to the CFSSL server."
   (post-api-request req conn "authsign" "certificate"))
+
+(defmethod new-key-and-csr ((conn server) (req certificate-request) &optional provider)
+  "Send an unauthenticated request for a new private key and corresponding CSR."
+  (let ((req (if provider
+		 (authenticate-request provider req)))))
+  (post-api-request req conn "newkey" '("private_key" "certificate_request")))
+
+(defmethod new-key-and-cert ((conn server) (req certificate-request)
+			     &optional provider)
+  "Send a request for a new private key and accompanying certificate from the information present in the certificate request. If provider is present, it will be used to authenticate the request."
+  (let ((req (if provider
+		 (authenticate-request provider req)
+		 req)))
+    (post-api-request req conn "newcert"
+		      '("private_key" "certificate" "certificate_request"))))
+
+(defmethod new-key-and-cert ((conn server) (req certificate-request)
+			     &optional provider)
+  "Send a request for a new private key and accompanying certificate. If provider is present, it will be used to authenticate the request."
+  (let ((req (if provider
+		 (authenticate-request provider req)
+		 req)))
+    (post-api-request req conn "newcert"
+		      '("private_key" "certificate" "certificate_request"))))
