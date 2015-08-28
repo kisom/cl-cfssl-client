@@ -1,7 +1,7 @@
 ;;;; cl-cfssl-client.asd
 
 (asdf:defsystem #:cl-cfssl-client
-  :description "Describe cl-cfssl-client here"
+  :description "Common Lisp CFSSL API client."
   :author "K. Isom <kyle@metacircular.net>"
   :license "MIT license"
   :depends-on (#:cl-fad

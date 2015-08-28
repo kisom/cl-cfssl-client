@@ -14,12 +14,15 @@
 	   #:http-error
 	
            ;; utils.lisp
+           #:hash-table-keys
 	   #:write-response-to-file
 	
 	   ;; requests.lisp
 	   #:cert-request->gen-request
 	   #:certificate-request
 	   #:generate-and-sign-request
+           #:hosts-of
+           #:names-of
 	   #:new-certificate-request
 	   #:new-subject-name
            #:new-sign-request
@@ -27,6 +30,7 @@
            #:new-simple-subject
            #:sign-request
            #:subject
+           #:subject-from-certificate-request
            #:subject-name
 	
 	   ;; auth.lisp

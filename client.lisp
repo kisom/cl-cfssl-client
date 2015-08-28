@@ -76,8 +76,7 @@ received from the server."
     (unless (emptyp profile)
       (sethash "profile" profile ht))))
 
-(defmethod info ((conn server) (label string) (profile string)
-                 &key extra)
+(defmethod info ((conn server) &key (profile "") (label "") extra)
   "Request a CFSSL CA's certificate, and optionally additional
 information."
   (post-api-request (info-request label profile)

@@ -55,7 +55,7 @@ the lambda list must be non-nil."
 
 (defclass key-specification ()
   ((algorithm :initarg :algo
-	      :reader :algorithm-of
+	      :reader algorithm-of
 	      :type string
 	      :documentation "This specifies the public key algorithm for the key; it must be one of \"rsa\" or \"ecdsa\".")
    (size :initarg :size
@@ -93,16 +93,6 @@ the lambda list must be non-nil."
 	 '*rsa-4096-key*
 	 '*rsa-3072-key*
 	 '*rsa-2048-key*))
-
-#|
-type CertificateRequest struct {
-    CN         string
-    Names      []Name      `json:"names"`
-    Hosts      []string    `json:"hosts"`
-    KeyRequest *KeyRequest `json:"key,omitempty"`
-    CA         *CAConfig   `json:"ca,omitempty"`
-}
-|#
 
 (defclass certificate-request ()
   ((common-name :initarg :common-name
@@ -172,6 +162,13 @@ specifier overridden."
                                  :locality city
                                  :org org
                                  :org-unit org-unit))))
+
+(defun subject-from-certificate-request (request)
+  "If a certificate-request has already been generated, this will create
+a new signature subject information from the request."
+  (make-instance 'subject
+                 :common-name (or (common-name-of request) "")
+                 :names (names-of request)))
 
 (defmethod ->hash-table ((subject subject) &key (converter #'keyword-to-downcase))
   "When presented with subject information, #'->hash-table should capitalise

@@ -49,8 +49,7 @@ case, the default port will be used), or as a host:port."))
   (with-fallback (group servers)
     (sign (first servers) request)))
 
-(defmethod info ((group server-group) (label string) (profile string)
-                 &key extra)
+(defmethod info ((group server-group) &key (profile "") (label "") extra)
   "Request information about the first CA that can be reach in the
 group. If usages is nil, it will return a string containing the CA's
 certificate; otherwise, a hash-table containing the certificate and
