@@ -30,7 +30,10 @@ returned."))
 ;;; new-key-and-csr asks the server to generate a new key and
 ;;; PKCS #10 certificate request.
 (defgeneric new-key-and-csr (remote request &optional provider)
-  (:documentation "Request a new private key and PKCS #10 certificate request from a CFSSL server. This is intended to be used with a local instance of CFSSL, and should not be sent over the network: the private key is transmitted in cleartext."))
+  (:documentation "Request a new private key and PKCS #10 certificate
+request from a CFSSL server. This is intended to be used with a local
+instance of CFSSL, and should not be sent over the network: the
+private key is transmitted in cleartext."))
 
 ;; new-key-and-cert asks the server to generate a new key and sign a
 ;; certificate for this key. As explained in the CFSSL docs, this
