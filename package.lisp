@@ -24,14 +24,15 @@
            #:hosts-of
            #:names-of
 	   #:new-certificate-request
-	   #:new-subject-name
+           #:new-gen-request
            #:new-sign-request
            #:new-sign-request-from-file
            #:new-simple-subject
+	   #:new-subject-name
            #:sign-request
            #:subject
-           #:subject-from-certificate-request
            #:subject-name
+           #:subject-of
 	
 	   ;; auth.lisp
 	   #:new-standard-auth

@@ -1,0 +1,278 @@
+@begin(section)
+@title(Overview)
+
+The
+@link[uri="https://github.com/kisom/cl-cfssl-client"](@c(cfssl-client))
+package provides access to a
+@link[uri="https://github.com/cloudflare/cfssl"](CFSSL) server. CFSSL
+provides an HTTP API server for a TLS certificate authority; it can be
+used to generate private keys, PKCS #10 certificate requests, and sign
+certificates.
+
+This client provides the following benefits, assuming that a CFSSL
+server is available:
+
+@begin(list)
+
+@item(Programmatically obtain new TLS keys and accompanying certificate
+signing requests. This is useful as there aren't any good cryptographic
+or X.509 packages available via Quicklisp. This is useful in automating
+infrastructure.)
+
+@item(Programmatically sign certificates. This is useful in automating
+infrastructure.)
+
+@item(Combined with libraries like CommonQt or CAPI, there are tools
+available for building easier graphical interfaces for getting
+certificates and keys generated and signed. This is useful in easing
+the burden of getting keys and certificates for users.)
+
+@end(list)
+
+The following CFSSL resources might be useful:
+
+@begin(list)
+
+@item(The CFSSL @link[uri="https://cfssl.org/"](homepage).)
+
+@item(Prebuilt CFSSL @link[uri="https://pkg.cfssl.org/"](packages).)
+
+@item(The canonical Go client's
+@link[uri="http://godoc.org/github.com/cloudflare/cfssl/auth"](documentation).)
+
+@item(The CFSSL @link[uri="https://github.com/cloudflare/cfssl/tree/master/doc"](documentation).)
+
+@end(list)
+
+@b(Note): while I am one of the primary developers of CFSSL at work,
+this project is not official and is not sanctioned or sponsored by
+@link[uri="https://cloudflare.com/"](CloudFlare); it is worked on
+entirely in my spare time.
+
+Developed primarily in @link[uri="http://lispworks.com/"](LispWorks
+7.0) with a HobbyistDLV license, but the code examples here have
+been generated in @link[uri="http://sbcl.org/"](SBCL 1.2.14), on a
+pair of 64-bit Linux machines (running Arch linux and Ubuntu 15.04).
+
+
+@end(section)
+
+@begin(section)
+@title(Quick demo)
+
+@code[lang=lisp](@include[path=simple-demo.lisp]())
+
+@end(section)
+
+@begin(section)
+@title(API Reference)
+
+@begin(section)
+@title(Remotes)
+
+Interactions with a CFSSL server requires that the server(s) be
+specified. The canonical CFSSL client implementation calls these
+specifications @b(Remotes). There are two primary types of Remote:
+
+@begin(deflist)
+
+@term(Server)
+@begin(def)
+
+@cl:with-package[name="cfssl-client"](
+@cl:doc(class server)
+@cl:doc(function new-server))
+
+@begin[lang=lisp](code)
+(defvar *local-server*
+  (new-server "127.0.0.1"))
+@end(code)
+
+@begin[lang=lisp](code)
+(defvar *public-server*
+  (new-server "ca.example.net:8080"))
+@end(code)
+
+@end(def)
+
+@term(Server group)
+@begin(def)
+
+A server group is a list of @c(server)s, accompanied by a @b(strategy)
+for selecting the appropriate server. As of this writing, the only
+strategy implemented in the canonical client is the @b(fallback)
+strategy (called @b(ordered list) in the canonical client).
+
+@begin(deflist)
+@term(Fallback)
+@begin(def)
+
+In the fallback strategy, the group is denoted by an ordered list of
+servers. For each request, the first server in the list will be tried;
+failing this, the request is retried with each successive server until
+either the request succeeds or the list of servers is exhausted.
+
+@end(def)
+@end(deflist)
+
+@end(def)
+@end(deflist)
+
+@cl:with-package[name="cfssl-client"](
+@cl:doc(class server-group)
+@cl:doc(function new-server-group)
+)
+
+@begin[lang=lisp](code)
+(defvar *server-group*
+  (new-server-group "ca1.example.net"
+                    "ca2.example.net"
+		    "ca3.example.org:8080"))
+@end(code)
+@end(section)
+
+@begin(section)
+@title(Remote operations)
+
+There are five operations that are specified for a remote; however,
+the last two are typically only useful for @c(server)s.
+
+@cl:with-package[name="cfssl-client"](
+@cl:doc(generic info)
+@cl:doc(generic sign)
+@cl:doc(generic auth-sign)
+@cl:doc(generic new-key-and-csr)
+@cl:doc(generic new-key-and-cert)
+)
+
+The last two will send a private key in plaintext; it's intended to be
+run against a CFSSL API server running on the localhost. One of the
+features of the server is that it can act as a client, forwarding
+signing requests to another remote. For this reason, in this package,
+attempts to call @c(#'new-key-and-csr) or @c(#'new-key-and-cert) with
+a @c(server-group) will result in an error condition.
+
+@begin(section)
+@title(Requests)
+
+The remote methods (almost) all take their own type of request;
+@c(#'info) being the exception. These are provided for by various
+classes, along with helper functions for creating and working with
+them.
+
+@begin(deflist)
+
+@term(Subjects)
+@begin(def)
+
+Subjects keep track of the holder of a certificate, and contain
+metadata about the holder. Generally, subject information contains a
+"common name" that is generally used as the name of the certificate
+and a list of
+@link[uri="https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol#Directory_structure"](X.500
+Distinguished Names), or DN. For most certificates, there will be only
+one DN, but the standard requires that it be treated as a list.
+
+As an example, the certificate on
+@link[uri="https://common-lisp.net/"](common-lisp.net) has the
+following subject information:
+
+@begin(verb)
+Common Name (CN)           *.common-lisp.net
+Organization (O)           <Not Part Of Certificate>
+Organizational Unit (OU)   Domain Control Validated
+@end(verb)
+
+There are rules as to what information can be in the subject
+information, found in
+@link[uri="https://www.ietf.org/rfc/rfc5280.txt"](RFC 5280) and the
+CA/Browser forum's
+@link[uri="https://cabforum.org/baseline-requirements-documents/"](Baseline
+Requirements).
+
+A distinguished name is represented by the @c(subject-name) class, and
+the subject by its eponymous class. All of the requests take some form
+of subject information, and these may be thought of as the foundation
+of certificate issuance and the TLS public key infrastructure. Most 
+
+@cl:with-package[name="cfssl-client"](
+@cl:doc(class subject-name)
+@cl:doc(function new-subject-name)
+@cl:doc(class subject)
+@cl:doc(function new-simple-subject)
+)
+
+The subject information may be extracted from a request using
+@c(#'subject-of); the subject's names may be gotten using @c(#'names-of).
+
+@cl:with-package[name="cfssl-client"](
+@cl:doc(generic subject-of)
+@cl:doc(generic names-of)
+)
+
+@end(def)
+
+@term(Signing)
+
+If a CSR has already been generated through some other means, it
+can be sent off to the server for signing.
+
+@begin(def)
+
+@cl:with-package[name="cfssl-client"](
+@cl:doc(class sign-request)
+@cl:doc(function new-sign-request)
+@cl:doc(function new-sign-request-from-file)
+)
+
+@end(def)
+
+@term(Key and CSR generation)
+@begin(def)
+
+The @c(sign) method presupposes that the user has a private key and
+CSR already. If this is not the case, a new private key and CSR can be
+obtained from a locally-running CFSSL. The format of this request is
+represented by the @c(certificate-request) class..
+
+@cl:with-package[name="cfssl-client"](
+@cl:doc(class certificate-request)
+@cl:doc(function new-certificate-request)
+)
+
+The key specifier can be one of the following:
+
+@cl:with-package[name="cfssl-client"](
+@cl:doc(variable *rsa-2048-key*)
+@cl:doc(variable *rsa-3072-key*)
+@cl:doc(variable *rsa-4096-key*)
+@cl:doc(variable *ec-p256-key*)
+@cl:doc(variable *ec-p384-key*)
+@cl:doc(variable *ec-p521-key*)
+)
+
+@end(def)
+
+@term(Key and certificate generation)
+@begin(def)
+
+As mentioned in the section on remotes, a local CFSSL server can be
+configured to forward signing requests to another remote. It can
+generate the key locally, but hand off the actual signing to another
+system. This makes generating a key and certificate in one shot a
+viable option.
+
+@cl:with-package[name="cfssl-client"](
+@cl:doc(class generate-and-sign-request)
+@cl:doc(function cert-request->gen-request)
+@cl:doc(function new-gen-request)
+)
+
+@end(def)
+
+@end(deflist)
+
+@end(section)
+
+@end(section) 
+@end(section)

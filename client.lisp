@@ -82,14 +82,14 @@ information."
   (post-api-request (info-request label profile)
                     conn "info" (if extra nil "certificate")))
 
-(defmethod auth-sign ((conn server) (req sign-request)
+(defmethod auth-sign ((remote server) (req sign-request)
                       &optional provider id)
   "Use the provider to authenticate the request, then send the request
 to the CFSSL server."
   (post-api-request (authenticate-request provider req)
-                    conn "authsign" "certificate"))
+                    remote "authsign" "certificate"))
   
-(defmethod auth-sign ((conn server) (req auth-sign-request)
+(defmethod auth-sign ((remote server) (req auth-sign-request)
                       &optional provider id)
   "Send an authenticated request to the CFSSL server."
   (post-api-request req conn "authsign" "certificate"))

@@ -26,9 +26,6 @@ case, the default port will be used), or as a host:port."))
   (make-instance 'server-group
                  :servers (mapcar #'new-server hosts)))
 
-;;; todo: write a macro `with-fallback` to reduce some of the common
-;;; elements below.
-
 (defmacro with-fallback (opts &rest body)
   (let ((f (gensym))
 	(group (first opts))

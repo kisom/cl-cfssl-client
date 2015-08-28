@@ -54,3 +54,8 @@ type and endpoint."))
   (error "The method #'remote-uri is inappropriate for an object of type ~A"
          (type-of remote)))
 
+(defgeneric subject-of (request)
+  (:documentation "Extract the subject from a request."))
+
+(defgeneric names-of (subject)
+  (:documentation "Extract the names from a @c(subject)."))

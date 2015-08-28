@@ -78,12 +78,12 @@ the list."
   (unless (null lst)
     (cons (alist-cons lst) (list-to-alist (rest (rest lst))))))
 
-(defmacro if-present-set (k k% alst ht)
+(defun if-present-set (k k% alst ht)
   "If k has a non-NIL value in the alist alst, set the key k% in the
 hash-table ht to that value."
-  `(let ((v (rest (assoc ,k ,alst))))
+  (let ((v (rest (assoc k alst))))
     (unless (null v)
-      (sethash ,k% v ,ht))))
+      (sethash k% v ht))))
 
 (defun set-if-bound (obj slot k ht)
   (when (slot-boundp obj slot)
@@ -106,8 +106,7 @@ single element; otherwise, return an list of the hash tables."
      ,@body
      ,(if (null (rest htsyms))
          (first htsyms)
-        htsyms)))
-         
+        `(list ,@htsyms))))
 
 (defun emptyp (v)
   "Returns true if v is nil or an empty string."
@@ -170,11 +169,12 @@ keys, an new hash table of only the requested keys will be returned."
   (case (aval :status response)
     (404 (error (page-not-found (aval :uri response))))
     (200 (let ((rht (yason:parse (to-string (aval :body response)))))
-         (if (gethash "success" rht)
-             (extract-keys (gethash "result" rht) keys)
-           (error (new-api-error (first (gethash "errors" rht)))))))
-    (t (error (new-http-error (aval :status response)
-                              (string-trim (aval :body response)))))))
+           (if (gethash "success" rht)
+               (extract-keys (gethash "result" rht) keys)
+             (error (new-api-error (first (gethash "errors" rht)))))))
+    (t (let ((rht (yason:parse (to-string (aval :body response)))))
+         (error (new-api-error (first (gethash "errors" rht))))))))
+
 
 (defun split-host-port (s)
   "Split a host:port specification into an improper list containing
@@ -230,17 +230,18 @@ used in #'every. If the predicate fails, an error will be returned."
 	(t (concatenate 'string base "-" suffix))))
 
 (defmacro did-any-p (&body body)
-  "Did any of the forms in the body return T? Executes all of the forms"
+  "Did any of the forms in the body return T after executing all of
+them?"
   `(reduce (lambda (x y) (or x y))
 	   (list ,@body)))
 
 (defun write-response-to-file (base-path response)
-  "Given a CFSSL CA response (e.g. from #'new-key-and-csr), write the
-keys that are present to disk. If base-path is a directory, the files
-will be written to key.pem, csr.pem, and cert.pem,
-respectively. Otherwise, they will be written as -key.pem, -csr.pem,
-and -cert.pem concatenated onto the base path. Returns T if any of the
-keys were written."
+  "Given a CFSSL CA response (e.g. from @c(#'new-key-and-csr)), write
+the keys that are present to disk. If base-path is a directory, the
+files will be written to key.pem, csr.pem, and cert.pem, respectively.
+Otherwise, they will be written as -key.pem, -csr.pem, and -cert.pem
+concatenated onto the base path. Returns T if any of the keys were
+written."
   (did-any-p
     (hash-table-key-to-disk response "private-key"
 			    (build-pathname base-path "key.pem"))
