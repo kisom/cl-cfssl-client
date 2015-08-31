@@ -21,5 +21,6 @@
                (:file "requests")
                (:file "auth")
                (:file "client")
-               (:file "groups")))
+               (:file "groups")
+               (:file "config")))
 

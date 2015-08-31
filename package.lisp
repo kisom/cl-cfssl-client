@@ -46,5 +46,9 @@
 	   ;; groups.lisp
            #:new-server-group
            #:server-group
+
+           ;; config.lisp
+           #:load-config-file
+           #:get-auth-provider-for-profile
 ))
 
