@@ -270,6 +270,18 @@ viable option.
 
 @end(def)
 
+@term(Configuration files)
+@begin(def)
+
+There is currently only preliminary support for loading CFSSL
+configuration files. So far, there are two functions provided:
+
+@cl:with-package[name="cfssl-client"](
+@cl:doc(function load-config-file)
+)
+
+@end(def)
+
 @end(deflist)
 
 @end(section)

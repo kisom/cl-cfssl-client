@@ -52,10 +52,10 @@ process the authentication keys, creating providers where possible."
 
 (defun get-profile (config profile)
   "Extract the signing profile named by @c(profile)."
-  (let ((profiles (gethash "signing" config)))0
+  (let ((profiles (gethash "signing" config)))
     (if (emptyp profile)
-        (gethash "default" signing)
-          (gethash profile (gethash "profiles" profiles)))))
+        (gethash "default" profiles)
+      (gethash profile (gethash "profiles" profiles)))))
 
 (defun get-auth-provider-for-profile (config profile)
   (let* ((sign-profile (get-profile config profile))
