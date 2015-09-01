@@ -23,8 +23,12 @@ case, the default port will be used), or as a host:port."))
 
 (defun new-server-group (&rest hosts)
   "Set up a new handle to a server group."
-  (make-instance 'server-group
-                 :servers (mapcar #'new-server hosts)))
+  (labels ((build-server (srv)
+             (cond ((stringp srv) (new-server srv))
+                   ((equal (type-of srv) 'server) srv)
+                   (t (error "Invalid server.")))))
+    (make-instance 'server-group
+                   :servers (mapcar #'build-server hosts))))
 
 (defmacro with-fallback (opts &rest body)
   (let ((f (gensym))

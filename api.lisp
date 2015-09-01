@@ -4,10 +4,10 @@
 
 ;;; auth-sign performs an authenticated signature request.
 (defgeneric auth-sign (remote req &optional provider id)
-  (:documentation "Sending a singing request to the remote, asking it
-to sign a certificate to be generated from the PKCS #10 certificate
+  (:documentation "Send a singing request to the remote, asking it to
+sign a certificate to be generated from the PKCS #10 certificate
 signing request and accompanying metadata contained in the request. If
-the request is not an `auth-sign-request`, the provider must be
+the request is not an @c(auth-sign-request), the provider must be
 non-NIL and a valid authentication provider that will be used to
 authenticate the request."))
 
@@ -15,7 +15,7 @@ authenticate the request."))
 (defgeneric sign (remote sign-request)
   (:documentation "Send a request to the remote, asking it to sign a
 certificate to be generated from the PKCS #10 certificate signing
-request and accompanying metadata contained in `sign-request`."))
+request and accompanying metadata contained in @c(sign-request)."))
 
 ;;; info returns the CA's certificate for the given label and profile.
 ;;; if usages is not nil, it will return a hash table containing the
@@ -50,7 +50,7 @@ the network: the private key is transmitted in cleartext."))
 type and endpoint."))
 
 (defmethod remote-uri (remote endpoint)
-  "remote-uri should fail with a bad remote."
+  "remote-uri should failo with a bad remote."
   (error "The method #'remote-uri is inappropriate for an object of type ~A"
          (type-of remote)))
 

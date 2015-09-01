@@ -14,23 +14,28 @@
 
 (defclass subject-name ()
   ((country :initarg :country
+            :initform ""
             :type string
             :reader country-of
             :documentation "Subject's country.")
    (state :initarg :state
+          :initform ""
           :type string
           :reader state-of
           :documentation "Subject's state or province.")
    (locality :initarg :locality
+             :initform ""
              :type string
              :reader locality-of
              :documentation "Subject's city, municipality, township,
 etc...")
    (organization :initarg :org
+                 :initform ""
                  :type string
                  :reader org-of
                  :documentation "Organisation the subject belongs to.")
    (org-unit :initarg :org-unit
+             :initform ""
              :type string
              :reader org-unit-of
              :documentation "The organisational unit is used to
@@ -38,7 +43,11 @@ distinguish subjects in the same organisation that might in a
 different department or functional area of the organisation."))
   (:documentation "An X.500 Distinguished Name."))
 
-(defun new-subject-name (&key country state locality org org-unit)
+(defun new-subject-name (&key (country "")
+                              (state "")
+                              (locality "")
+                              (org "")
+                              (org-unit ""))
   "Produce a new subject-name entry. At least one of the members of
 the lambda list must be non-nil."
   (assert (some #'identity (list country state locality org org-unit))

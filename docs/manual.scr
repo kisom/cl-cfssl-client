@@ -1,4 +1,41 @@
 @begin(section)
+@title(Index)
+
+@b(cl-cfssl-client) is a Common Lisp CFSSL API client.
+
+@begin(deflist)
+
+@term(Source)
+@begin(def)
+
+The source may be obtained from
+@link[uri="https://github.com/kisom/cl-cfssl-client/"](Github).
+
+@end(def)
+
+@term(Setup and Usage)
+@begin(def)
+
+This library requires
+@link[uri="https://quicklisp.org/"](Quicklisp). The repository should
+be cloned into the @c(local-projects) directory under the Quicklisp
+home.
+
+@end(def)
+
+@term(License)
+@begin(def)
+
+@b(cl-cfssl-client) is released under the
+@link[uri="https://raw.githubusercontent.com/kisom/cl-cfssl-client/master/LICENSE"](MIT)
+license.
+
+@end(def)
+@end(deflist)
+
+@end(section)
+
+@begin(section)
 @title(Overview)
 
 The
@@ -58,10 +95,20 @@ pair of 64-bit Linux machines (running Arch linux and Ubuntu 15.04).
 @end(section)
 
 @begin(section)
-@title(Quick demo)
+@title(A simple example)
+
+@code[lang=lisp](@include[path=simple-example.lisp]())
+
+@end(section)
+
+@begin(section)
+@title(REPL demo)
+
+This demo was done in an SBCL 1.2.14 REPL with a pair
+of CFSSL instances running locally; an @c(/etc/hosts)
+entry was used for the @c(ca.example.org) entry.
 
 @code[lang=lisp](@include[path=simple-demo.lisp]())
-
 @end(section)
 
 @begin(section)
@@ -177,11 +224,11 @@ As an example, the certificate on
 @link[uri="https://common-lisp.net/"](common-lisp.net) has the
 following subject information:
 
-@begin(verb)
+@begin(code)
 Common Name (CN)           *.common-lisp.net
 Organization (O)           <Not Part Of Certificate>
 Organizational Unit (OU)   Domain Control Validated
-@end(verb)
+@end(code)
 
 There are rules as to what information can be in the subject
 information, found in
@@ -282,9 +329,52 @@ configuration files. So far, there are two functions provided:
 
 @end(def)
 
+@term(Authentication)
+@begin(def)
+
+In order to restrict access to the server, it may employ an
+authentication system; this is implemented as the concept of
+@c(@link[uri="http://godoc.org/github.com/cloudflare/cfssl/auth#Provider"](Provider))s. This
+package only implements half of this interface: it can generate
+authentication tokens, but it doesn't have facilities for verifying
+them, as this is not used by clients. As currently implemented, this
+is an a single @b(Standard) provider computing an HMAC-SHA-256 token
+over a serialised request.
+
+The @c(auth-sign) method can take either an unauthenticated or
+authenticated request; if the request is unauthenticated, the optional
+@c(provider) argument is required to produce an authenticated request.
+
+@cl:with-package[name="cfssl-client"](
+@cl:doc(function new-standard-auth)
+@cl:doc(function authenticate-request)
+)
+@end(def)
+
+@term(Utilities)
+@begin(def)
+There are a few utility functions provided with the client.
+
+Many of the functions return a hash table containing the results. The
+@c(hash-table-keys) function can be used to return a list of the keys
+in the hash table.
+
+@cl:with-package[name="cfssl-client"](
+@cl:doc(function hash-table-keys)
+)
+
+When given a hash table response, it's often useful to save certificates,
+certificate requests, and private keys to disk. This function will only
+write these three values to disk, and only those that are present in the
+hash table.
+
+@cl:with-package[name="cfssl-client"](
+@cl:doc(function write-response-to-file)
+)
+
+@end(def)
+
 @end(deflist)
-
 @end(section)
-
 @end(section) 
 @end(section)

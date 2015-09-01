@@ -22,13 +22,13 @@
 	     m)
     alist))
 
-(defun hash-table-keys (m)
+(defun hash-table-keys (ht)
   "Returns a list of the keys in the hash table."
   (let ((keys '()))
     (maphash (lambda (k v)
 	       (declare (ignore v))
 	       (push k keys))
-	     m)
+	     ht)
     keys))
 
 (defun alist-to-hash-table (alist)
@@ -211,6 +211,32 @@ used in #'every. If the predicate fails, an error will be returned."
     (if (listp v)
         (maybe-validate v)
       (maybe-validate (list v)))))
+
+(defun validate (pred x)
+  "If pred does not hold for x, throw an error."
+  (format t "Validating ~A~%")
+  (if (funcall validator x)
+      (format t "~A is valid.~%" x)
+    (error "Validation failed for ~A of ~A."
+           x (type-of x))))
+
+(defun maybe-validate (pred vect)
+  "If pred is not NIL, call @c(validate) over the elements of the
+vector."
+  (format t "validator: ~A~%" pred)
+  (when (functionp pred)
+    (format t "Will validate~%")
+    (dolist (x vect)
+      (funcall validate pred x)))
+  vect)
+
+(defun to-vector (v &key validator)
+  "If v is not a vector, make it a vector. If validator is not nil, it
+should be a predicate for elements in the resulting list; it will be
+used in #'every. If the predicate fails, an error will be returned."
+    (cond ((vectorp v) (maybe-validate validator v))
+          ((listp v)   (maybe-validate validator (apply #'vector v)))
+          (t (maybe-validate validator (funcall #'vector v)))))
         
 (defun hash-table-key-to-disk (ht k path)
   "Write the value of the hash table HT for the key K to PATH."

@@ -92,7 +92,7 @@ to the CFSSL server."
 (defmethod auth-sign ((remote server) (req auth-sign-request)
                       &optional provider id)
   "Send an authenticated request to the CFSSL server."
-  (post-api-request req conn "authsign" "certificate"))
+  (post-api-request req remote "authsign" "certificate"))
 
 (defmethod new-key-and-csr ((conn server) (req certificate-request) &optional provider)
   "Send an unauthenticated request for a new private key and corresponding CSR."
