@@ -55,12 +55,17 @@ process the authentication keys, creating providers where possible."
   (let ((profiles (gethash "signing" config)))
     (if (emptyp profile)
         (gethash "default" profiles)
-      (gethash profile (gethash "profiles" profiles)))))
+	(gethash profile (gethash "profiles" profiles)))))
+
+(defun extract-auth-provider (profile)
+  (let ((auth-remote (gethash "auth_remote" profile)))
+    (when auth-remote
+      (gethash "auth_key" auth-remote))))
 
 (defun get-auth-provider-for-profile (config profile)
   (let* ((sign-profile (get-profile config profile))
          (auth-key-name (and sign-profile
-                             (gethash "auth_key" sign-profile))))
+                             (extract-auth-provider sign-profile))))
     (when auth-key-name
       (gethash auth-key-name (gethash "auth_keys" config)))))
 
